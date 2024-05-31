@@ -5,7 +5,7 @@ export const createUser = async (email: string, password: string) => {
     return result.lastInsertRowid
 }
 
-export const findUser = async (email: string) => {
+export const getUserByEmail = async (email: string) => {
     const result = db.prepare('SELECT * FROM users WHERE email = ?').get(email)
     return result
 }

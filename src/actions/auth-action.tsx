@@ -1,6 +1,7 @@
 'use server'
-import { hashUserPassword } from "../lib/hash"
-import { createUser, findUser } from "../lib/user"
+import { createAuthSession, destroySession } from "@/lib/auth"
+import { hashUserPassword, verifyPassword } from "../lib/hash"
+import { createUser, getUserByEmail } from "../lib/user"
 import { redirect } from "next/navigation"
 
 export const signup = async(prevState: any, formData: FormData) => {
@@ -28,7 +29,9 @@ export const signup = async(prevState: any, formData: FormData) => {
     
     const hashedPassword = hashUserPassword(password)
     try{
-        createUser(email, hashedPassword)
+        const id = createUser(email, hashedPassword)
+        await createAuthSession(await id)
+        redirect('/training') 
     }catch(error: any){
         if(error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
             return {
@@ -38,6 +41,46 @@ export const signup = async(prevState: any, formData: FormData) => {
             }
         }
         throw error
+    }  
+    
+}
+
+export const login = async(prevState: any, formData: FormData) => {
+    const email = formData.get('email')
+    const password = formData.get('password')
+
+    const existingUser = await getUserByEmail(email as string)
+
+    if(!existingUser){
+        return {
+            errors: {
+                email: 'Could not authenciate user, please check your credentials'
+            }
+        }
     }
-    redirect('/training') 
+
+    const isValidPassword = verifyPassword(existingUser.password, password as string)
+
+    if (!isValidPassword) {
+        return {
+            errors: {
+                password: 'Could not authenciate user, please check your credentials'
+            }
+        }
+    }
+
+    await createAuthSession(existingUser.id)
+    redirect('/training')
+}
+
+export const auth = async (mode: string, prevState: any, formData: FormData) => {
+    if(mode === 'login'){
+        return login(prevState, formData)
+    }
+    return signup(prevState, formData)
+}
+
+export const logout = async() => {
+    await destroySession()
+    redirect('/')
 }

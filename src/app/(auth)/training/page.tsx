@@ -1,7 +1,14 @@
 import { ITraining } from '@/interfaces/Training';
+import { verifyAuth } from '@/lib/auth';
 import { getTrainings } from '@/lib/training';
+import { redirect } from 'next/navigation';
 
 export default async function TrainingPage() {
+  const result = await verifyAuth()
+
+  if(!result.user){
+    return redirect('/')
+  }
   const trainingSessions = getTrainings();
 
   return (
